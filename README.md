@@ -12,9 +12,51 @@ If `@LogToTable = 'Y'` is specified, then you must also have the [CommandLog](ht
 
 If `@DatabasesInParallel = 'Y'` is specified, then you must also have the [Queue](https://ola.hallengren.com/scripts/Queue.sql) and [QueueDatabase](https://ola.hallengren.com/scripts/QueueDatabase.sql) tables.
 
+## Syntax
+
+```
+EXEC [dbo].[DatabaseFileSizeMaintenance]
+   @Databases				= N'databases'
+[ ,@UsedSpacePercentHighThreshold	= used_space_percent_high_threshold ]
+[ ,@UsedSpacePercentLowThreshold	= used_space_percent_low_threshold ]
+[ ,@MinFileSizeToShrinkMB		= minimum_file_size_to_shrink_mb ]
+[ ,@MinDatabaseAgeInDays		= minimum_database_age_in_days ]
+[ ,@TargetShrinkSizePercent		= target_shrink_size_percent ]
+[ ,@MinTargetShrinkSizeMB		= minimum_target_shrink_size_mb ]
+[ ,@ShrinkAllowReorganize		= { 1 | 0 } ]
+[ ,@DatabaseOrder			= N'database_order' ]
+[ ,@DatabasesInParallel			= { 'N' | 'Y' } ]
+[ ,@LogToTable				= { 'N' | 'Y' } ]
+[ ,@Execute				= { 'N' | 'Y' } ]
+```
+
 ## Arguments
 
-TBA
+Details TBA
+
+`@Databases = N'databases'`
+
+`[ ,@UsedSpacePercentHighThreshold = used_space_percent_high_threshold ]`
+
+`[ ,@UsedSpacePercentLowThreshold = used_space_percent_low_threshold ]`
+
+`[ ,@MinFileSizeToShrinkMB = minimum_file_size_to_shrink_mb ]`
+
+`[ ,@MinDatabaseAgeInDays = minimum_database_age_in_days ]`
+
+`[ ,@TargetShrinkSizePercent = target_shrink_size_percent ]`
+
+`[ ,@MinTargetShrinkSizeMB = minimum_target_shrink_size_mb ]`
+
+`[ ,@ShrinkAllowReorganize = { 1 | 0 } ]`
+
+`[ ,@DatabaseOrder = N'database_order' ]`
+
+`[ ,@DatabasesInParallel = { 'N' | 'Y' } ]`
+
+`[ ,@LogToTable	= { 'N' | 'Y' } ]`
+
+`[ ,@Execute = { 'N' | 'Y' } ]`
 
 ## Remarks
 
@@ -28,7 +70,7 @@ TBA
 
 This project is licensed under the same open-source project as [Ola Hallengren's maintenance solution](https://ola.hallengren.com/license.html).
 
-The DatabaseFileSizeMaintenance procedure is licensed under the MIT license, a popular and widely used open source license.
+The DatabaseFileSizeMaintenance procedure is released under the [MIT license](LICENSE), a popular and widely used open source license.
 
 Copyright (c) 2020 Madeira Data Solutions
 
