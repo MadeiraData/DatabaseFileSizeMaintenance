@@ -183,4 +183,4 @@ Copyright (c) 2020 Madeira Data Solutions
 
 ## See Also
 
-- [Database File Size Maintenance | Eitan Blumin](https://eitanblumin.com/portfolio/database-file-size-maintenance/)
+- [Database File Size Maintenance - Eitan Blumin](https://eitanblumin.com/portfolio/database-file-size-maintenance/)
