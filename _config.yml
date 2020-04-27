@@ -1,5 +1,15 @@
 title: DB File Size Maintenance
-logo: /media/logo.png
 base_url: /DatabaseFileSizeMaintenance
+logo: /media/logo.png
+social-network-links:
+  rss: false
+  email: info@madeiradata.com
+  linkedin: madeira-sql-server-services
+  github: MadeiraData
+  twitter: Madeira_Data
+share-links-active:
+  twitter: true
+  facebook: true
+  linkedin: true
 show_downloads: true
 theme: jekyll-theme-minimal
