@@ -1,5 +1,9 @@
 # DatabaseFileSizeMaintenance
 
+**APPLIES TO:** ![Yes](media/yes-icon.png)SQL Server ![Yes](media/yes-icon.png)Azure SQL Database (Managed Instance only) ![No](media/no-icon.png)Azure Synapse Analytics (SQL DW) ![No](media/no-icon.png)Parallel Data Warehouse 
+
+-------
+
 This project is for development of a stored procedure, which is to be used as an add-on to [Ola Hallengren's maintenance solution](https://ola.hallengren.com), and retains the same standards and conventions in its implementation of parameters.
 
 The `DatabaseFileSizeMaintenance` procedure focuses on managing database file size growth and shrink, based on specified parameters.
