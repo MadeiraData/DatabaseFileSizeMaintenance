@@ -21,11 +21,11 @@ ALTER PROCEDURE [dbo].[DatabaseFileSizeMaintenance]
 ,@MinDatabaseAgeInDays			INT = 30	-- databases must be at least this old to be checked
 ,@TargetShrinkSizePercent		INT = 33	-- when shrinking, try to shrink down to this percentage of current file size
 ,@MinTargetShrinkSizeMB			INT = 64	-- prevent shrinking to a size smaller than this
-,@ShrinkAllowReorganize			BIT = 1		-- set whether to allow reorganizing pages during shrink
+,@ShrinkAllowReorganize			CHAR(1) = 'Y'		-- set whether to allow reorganizing pages during shrink
 ,@DatabaseOrder				NVARCHAR(max) = NULL
-,@DatabasesInParallel			NVARCHAR(max) = 'N'
-,@LogToTable				NVARCHAR(max) = 'Y'
-,@Execute				NVARCHAR(max) = 'Y'
+,@DatabasesInParallel			CHAR(1) = 'N'
+,@LogToTable				CHAR(1) = 'Y'
+,@Execute				CHAR(1) = 'Y'
 AS
 BEGIN
 	-- SET NOCOUNT ON added to prevent extra result sets from
@@ -680,7 +680,7 @@ BEGIN
 			DECLARE @FileSizeAfterShrink INT
 			RAISERROR(N'DB: %s, File: %s used space %s percent - shrinking from %d to %d', 0, 1, @DB_name, @DB_FileName, @PercentString, @FileSizeInMB, @NewSizeForFile) WITH NOWAIT;
 			SET @Qry = 'DBCC SHRINKFILE(' + QUOTENAME(@DB_FileName) + ',' + CAST(@NewSizeForFile as varchar(1000)) 
-						+ CASE WHEN @ShrinkAllowReorganize = 1 THEN N'' ELSE N', TRUNCATEONLY' END + ') WITH NO_INFOMSGS;'
+						+ CASE WHEN @ShrinkAllowReorganize = 'Y' THEN N'' ELSE N', TRUNCATEONLY' END + ') WITH NO_INFOMSGS;'
 			
 			EXECUTE @CurrentCommandOutput01 = [dbo].[CommandExecute] @DatabaseContext = @DB_name,
 										   @Command      = @Qry, 
