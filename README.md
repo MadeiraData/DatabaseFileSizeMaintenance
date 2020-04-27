@@ -16,15 +16,15 @@ If `@DatabasesInParallel = 'Y'` is specified, then you must also have the [Queue
 
 ```
 EXEC [dbo].[DatabaseFileSizeMaintenance]
-   @Databases				= N'databases'
+   @Databases				= N'[ databases | ALL_DATABASES | SYSTEM_DATABASES | USER_DATABASES | AVAILABILITY_GROUP_DATABASES [ , ... ] ]'
 [ ,@UsedSpacePercentHighThreshold	= used_space_percent_high_threshold ]
 [ ,@UsedSpacePercentLowThreshold	= used_space_percent_low_threshold ]
 [ ,@MinFileSizeToShrinkMB		= minimum_file_size_to_shrink_mb ]
 [ ,@MinDatabaseAgeInDays		= minimum_database_age_in_days ]
 [ ,@TargetShrinkSizePercent		= target_shrink_size_percent ]
 [ ,@MinTargetShrinkSizeMB		= minimum_target_shrink_size_mb ]
-[ ,@ShrinkAllowReorganize		= { 1 | 0 } ]
-[ ,@DatabaseOrder			= N'database_order' ]
+[ ,@ShrinkAllowReorganize		= { 'N' | 'Y' } ]
+[ ,@DatabaseOrder			= { NULL | 'DATABASE_SIZE_ASC' | 'DATABASE_SIZE_DESC' | 'LOG_SIZE_SINCE_LAST_LOG_BACKUP_ASC' | 'LOG_SIZE_SINCE_LAST_LOG_BACKUP_DESC' | 'DATABASE_NAME_ASC' | 'DATABASE_NAME_DESC' } ]
 [ ,@DatabasesInParallel			= { 'N' | 'Y' } ]
 [ ,@LogToTable				= { 'N' | 'Y' } ]
 [ ,@Execute				= { 'N' | 'Y' } ]
@@ -34,7 +34,7 @@ EXEC [dbo].[DatabaseFileSizeMaintenance]
 
 Details TBA
 
-`@Databases = N'databases'`
+`@Databases = N'[ databases | ALL_DATABASES | SYSTEM_DATABASES | USER_DATABASES | AVAILABILITY_GROUP_DATABASES [ , ... ] ]'`
 
 `[ ,@UsedSpacePercentHighThreshold = used_space_percent_high_threshold ]`
 
@@ -48,9 +48,9 @@ Details TBA
 
 `[ ,@MinTargetShrinkSizeMB = minimum_target_shrink_size_mb ]`
 
-`[ ,@ShrinkAllowReorganize = { 1 | 0 } ]`
+`[ ,@ShrinkAllowReorganize = { 'N' | 'Y' } ]`
 
-`[ ,@DatabaseOrder = N'database_order' ]`
+`[ ,@DatabaseOrder = { NULL | 'DATABASE_SIZE_ASC' | 'DATABASE_SIZE_DESC' | 'LOG_SIZE_SINCE_LAST_LOG_BACKUP_ASC' | 'LOG_SIZE_SINCE_LAST_LOG_BACKUP_DESC' | 'DATABASE_NAME_ASC' | 'DATABASE_NAME_DESC' } ]`
 
 `[ ,@DatabasesInParallel = { 'N' | 'Y' } ]`
 
