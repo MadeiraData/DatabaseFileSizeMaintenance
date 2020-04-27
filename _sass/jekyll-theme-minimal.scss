@@ -67,17 +67,29 @@ blockquote {
   font-style:italic;
 }
 
-code, pre {
-  font-family:Monaco, Bitstream Vera Sans Mono, Lucida Console, Terminal, Consolas, Liberation Mono, DejaVu Sans Mono, Courier New, monospace;
-  color:#333;
+code {
+    font-family: Monaco, Bitstream Vera Sans Mono, Lucida Console, Terminal, Consolas, Liberation Mono, DejaVu Sans Mono, Courier New, monospace;
+    color: #333;
+    background: #f8f8f8;
+    border: 1px solid #e5e5e5;
+    padding: 2px 3px;
+    border-radius: 1px;
 }
 
 pre {
-  padding:8px 15px;
-  background: #f8f8f8;
-  border-radius:5px;
-  border:1px solid #e5e5e5;
-  overflow-x: auto;
+    font-family: Monaco, Bitstream Vera Sans Mono, Lucida Console, Terminal, Consolas, Liberation Mono, DejaVu Sans Mono, Courier New, monospace;
+    color: #333;
+    background: #f8f8f8;
+    border: 1px solid #e5e5e5;
+    padding: 8px 15px;
+    border-radius: 5px;
+    overflow-x: auto;
+}
+
+pre code {
+    border: none;
+    padding: 0px;
+    border-radius: 0px;
 }
 
 table {
