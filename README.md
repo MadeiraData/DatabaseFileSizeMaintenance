@@ -8,14 +8,6 @@ The `DatabaseFileSizeMaintenance` procedure focuses on managing database file si
 
 Download [DatabaseFileSizeMaintenance.sql](DatabaseFileSizeMaintenance.sql).
 
-## Prerequisites
-
-The procedure requires [Ola Hallengren's CommandExecute procedure](https://ola.hallengren.com/scripts/CommandExecute.sql) in order to run.
-
-If `@LogToTable = 'Y'` is specified, then you must also have the [CommandLog](https://ola.hallengren.com/scripts/CommandLog.sql) table in the same database.
-
-If `@DatabasesInParallel = 'Y'` is specified, then you must also have the [Queue](https://ola.hallengren.com/scripts/Queue.sql) and [QueueDatabase](https://ola.hallengren.com/scripts/QueueDatabase.sql) tables.
-
 ## Syntax
 
 For syntax conventions info, please see [Transact-SQL Syntax Conventions](https://docs.microsoft.com/en-us/sql/t-sql/language-elements/transact-sql-syntax-conventions-transact-sql).
@@ -165,10 +157,13 @@ Value|Description
 Y|Execute commands. This is the **default**.
 N|Only print commands.
 
-
 ## Remarks
 
-TBA
+The procedure requires [Ola Hallengren's CommandExecute procedure](https://ola.hallengren.com/scripts/CommandExecute.sql) in order to run.
+
+If `@LogToTable = 'Y'` is specified, then you must also have the [CommandLog](https://ola.hallengren.com/scripts/CommandLog.sql) table in the same database.
+
+If `@DatabasesInParallel = 'Y'` is specified, then you must also have the [Queue](https://ola.hallengren.com/scripts/Queue.sql) and [QueueDatabase](https://ola.hallengren.com/scripts/QueueDatabase.sql) tables.
 
 ## Examples
 
