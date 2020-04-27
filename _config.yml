@@ -11,5 +11,5 @@ share-links-active:
   twitter: true
   facebook: true
   linkedin: true
-show_downloads: true
+show_downloads: false
 theme: jekyll-theme-minimal
