@@ -27,7 +27,6 @@ ALTER PROCEDURE [dbo].[DatabaseFileSizeMaintenance]
 ,@LogToTable							CHAR(1) = 'Y'
 ,@Execute								CHAR(1) = 'Y'
 ,@FileTypes								CHAR(4) = 'ALL'					-- used for specifying the file types we want to manage
-
 AS
 BEGIN
 	-- SET NOCOUNT ON added to prevent extra result sets from
