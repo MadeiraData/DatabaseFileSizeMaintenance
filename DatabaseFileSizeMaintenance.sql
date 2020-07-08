@@ -14,18 +14,19 @@ License
 THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 ALTER PROCEDURE [dbo].[DatabaseFileSizeMaintenance]
- @Databases				NVARCHAR(MAX) = NULL
-,@UsedSpacePercentHighThreshold	        INT = 90	-- if used space higher than this, will grow file
-,@UsedSpacePercentLowThreshold	        INT = 10	-- if used space smaller than this, will shrink file
-,@MinFileSizeToShrinkMB			INT = 50000	-- if size smaller than thi  s, will not shrink
-,@MinDatabaseAgeInDays			INT = 30	-- databases must be at least this old to be checked
-,@TargetShrinkSizePercent		INT = 33	-- when shrinking, try to shrink down to this percentage of current file size
-,@MinTargetShrinkSizeMB			INT = 64	-- prevent shrinking to a size smaller than this
-,@ShrinkAllowReorganize			CHAR(1) = 'Y'		-- set whether to allow reorganizing pages during shrink
-,@DatabaseOrder				NVARCHAR(max) = NULL
-,@DatabasesInParallel			CHAR(1) = 'N'
-,@LogToTable				CHAR(1) = 'Y'
-,@Execute				CHAR(1) = 'Y'
+ @Databases								NVARCHAR(MAX) = NULL
+,@UsedSpacePercentHighThreshold	        INT = 90						-- if used space higher than this, will grow file
+,@UsedSpacePercentLowThreshold	        INT = 10						-- if used space smaller than this, will shrink file
+,@MinFileSizeToShrinkMB					INT = 50000						-- if size smaller than thi  s, will not shrink
+,@MinDatabaseAgeInDays					INT = 30						-- databases must be at least this old to be checked
+,@TargetShrinkSizePercent				INT = 33						-- when shrinking, try to shrink down to this percentage of current file size
+,@MinTargetShrinkSizeMB					INT = 64						-- prevent shrinking to a size smaller than this
+,@ShrinkAllowReorganize					CHAR(1) = 'Y'					-- set whether to allow reorganizing pages during shrink
+,@DatabaseOrder							NVARCHAR(max) = NULL
+,@DatabasesInParallel					CHAR(1) = 'N'
+,@LogToTable							CHAR(1) = 'Y'
+,@Execute								CHAR(1) = 'Y'
+,@FileTypes								CHAR(4) = 'ALL'					-- used for specifying the file types we want to manage
 AS
 BEGIN
 	-- SET NOCOUNT ON added to prevent extra result sets from
@@ -77,7 +78,7 @@ DECLARE @SelectedDatabases TABLE (DatabaseName nvarchar(max),
                                   StartPosition int,
                                   Selected bit)
 								  
-  DECLARE @SelectedAvailabilityGroups TABLE (AvailabilityGroupName nvarchar(max),
+DECLARE @SelectedAvailabilityGroups TABLE (AvailabilityGroupName nvarchar(max),
                                              StartPosition int,
                                              Selected bit)
 
@@ -154,7 +155,7 @@ DECLARE @DB_name			VARCHAR(500),
 		@FileSizeInMB		INT, 
 		@Qry				NVARCHAR(MAX)
 
-
+		
 
   SET @Version = CAST(LEFT(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(max)),CHARINDEX('.',CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(max))) - 1) + '.' + REPLACE(RIGHT(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(max)), LEN(CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(max))) - CHARINDEX('.',CAST(SERVERPROPERTY('ProductVersion') AS nvarchar(max)))),'.','') AS numeric(18,10))
 
@@ -591,7 +592,12 @@ SET @Qry = 'SELECT
 	[growth]				= df.growth,
 	[fileSizeInMB]			= df.size/128
 FROM sys.database_files df
-WHERE df.type IN (0,1) -- data and log files only'
+WHERE df.type IN ( ' + CASE @FileTypes
+                        WHEN 'ALL' THEN '0,1'
+                        WHEN 'LOG' THEN '1'
+                        WHEN 'ROWS' THEN '0'
+                        END + ')'
+
 
 DECLARE @sp_executesql nvarchar(max)
 
