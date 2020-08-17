@@ -12,6 +12,18 @@ The `DatabaseFileSizeMaintenance` procedure focuses on managing database file si
 
 Download [DatabaseFileSizeMaintenance.sql](DatabaseFileSizeMaintenance.sql).
 
+## Adding to MaintenanceSolution.sql
+
+In order to create a corresponding maintenance job as part of Ola Hallengre's `MaintenanceSolution.sql` script, find the first line that starts with `INSERT INTO @Jobs`, and add the following before that line:
+
+```
+  INSERT INTO @Jobs ([Name], CommandTSQL, DatabaseName, OutputFileNamePart01)
+  SELECT 'DatabaseFileSizeMaintenance - USER_DATABASES',
+         'EXECUTE [dbo].[DatabaseFileSizeMaintenance]' + CHAR(13) + CHAR(10) + '@Databases = ''USER_DATABASES'',' + CHAR(13) + CHAR(10) + '@LogToTable = ''' + @LogToTable + '''',
+         @DatabaseName,
+         'DatabaseFileSizeMaintenance'
+```
+
 ## Syntax
 
 For syntax conventions info, please see [Transact-SQL Syntax Conventions](https://docs.microsoft.com/en-us/sql/t-sql/language-elements/transact-sql-syntax-conventions-transact-sql).
