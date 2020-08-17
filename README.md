@@ -14,7 +14,9 @@ Download [DatabaseFileSizeMaintenance.sql](DatabaseFileSizeMaintenance.sql).
 
 ## Adding to MaintenanceSolution.sql
 
-In order to create a corresponding maintenance job as part of Ola Hallengre's `MaintenanceSolution.sql` script, find the first line that starts with `INSERT INTO @Jobs`, and add the following before that line:
+In order to create a corresponding maintenance job as part of Ola Hallengren's `MaintenanceSolution.sql` script:
+
+- Find the first line that starts with `INSERT INTO @Jobs`, and add the following before that line:
 
 ```
   INSERT INTO @Jobs ([Name], CommandTSQL, DatabaseName, OutputFileNamePart01)
