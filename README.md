@@ -44,6 +44,7 @@ EXEC dbo.DatabaseFileSizeMaintenance
 [ ,@DatabasesInParallel			= { 'N' | 'Y' } ]
 [ ,@LogToTable				= { 'N' | 'Y' } ]
 [ ,@Execute				= { 'N' | 'Y' } ]
+[ ,@FileTypes				= { 'ALL' | 'ROWS' | 'LOG' } ]
 ```
 
 ## Arguments
@@ -174,6 +175,18 @@ Value|Description
 ---|---
 Y|Execute commands. This is the **default**.
 N|Only print commands.
+
+### `@FileTypes`
+
+Specifies the type of database files that should be affected by this execution. It corresponds to the `type_desc` column of the [sys.master_files](https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-master-files-transact-sql) and [sys.database_files](https://docs.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-database-files-transact-sql) system tables. Available values:
+
+Value|Description
+---|---
+ALL|Affects both data and transaction log files. This is the **default**.
+ROWS|Affects data files only.
+LOG|Affects transaction log files only.
+
+Other file types (such as Full-Text, In-Memory, and FILESTREAM) cannot be shrank or grown using this stored procedure.
 
 ## Remarks
 
