@@ -15,7 +15,7 @@ THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR I
 */
 ALTER PROCEDURE [dbo].[DatabaseFileSizeMaintenance]
  @Databases								NVARCHAR(MAX) = NULL
-,@UsedSpacePercentHighThreshold	        INT = 90						-- if used space higher than this, will grow file
+,@UsedSpacePercentHighThreshold	        INT = 95						-- if used space higher than this, will grow file
 ,@UsedSpacePercentLowThreshold	        INT = 10						-- if used space smaller than this, will shrink file
 ,@MinFileSizeToShrinkMB					INT = 50000						-- if size smaller than thi  s, will not shrink
 ,@MinDatabaseAgeInDays					INT = 30						-- databases must be at least this old to be checked
@@ -643,7 +643,7 @@ BEGIN
 
 			SET @Qry = N'ALTER DATABASE ' + QUOTENAME(@DB_name) + N' MODIFY FILE(NAME = ' + QUOTENAME(@DB_FileName) + N', SIZE = ' + CAST(@NewSizeForFile as nvarchar(max)) + N'MB )'
 		
-			EXECUTE @CurrentCommandOutput01 = [dbo].[CommandExecute] @DatabaseContext = 'master',
+			EXECUTE @CurrentCommandOutput01 = [dbo].[CommandExecute]
 										   @Command      = @Qry, 
 										   @CommandType  = 'AutoGrowth', 
 										   @Mode		 = 1, 
@@ -688,7 +688,7 @@ BEGIN
 			SET @Qry = 'DBCC SHRINKFILE(' + QUOTENAME(@DB_FileName) + ',' + CAST(@NewSizeForFile as varchar(1000)) 
 						+ CASE WHEN @ShrinkAllowReorganize = 'Y' THEN N'' ELSE N', TRUNCATEONLY' END + ') WITH NO_INFOMSGS;'
 			
-			EXECUTE @CurrentCommandOutput01 = [dbo].[CommandExecute] @DatabaseContext = @DB_name,
+			EXECUTE @CurrentCommandOutput01 = [dbo].[CommandExecute]
 										   @Command      = @Qry, 
 										   @CommandType  = 'AutoShrink', 
 										   @Mode		 = 1, 
