@@ -676,6 +676,7 @@ BEGIN
 										   @CommandType  = 'AutoGrowth', 
 										   @Mode		 = 1, 
 										   @DatabaseName = @DB_name, 
+										   @DatabaseContext = @DB_name,
 										   @LogToTable   = @LogToTable, 
 										   @Execute      = @Execute
 			SET @Error = @@ERROR
@@ -721,6 +722,7 @@ BEGIN
 										   @CommandType  = 'AutoShrink', 
 										   @Mode		 = 1, 
 										   @DatabaseName = @DB_name, 
+										   @DatabaseContext = @DB_name,
 										   @LogToTable   = @LogToTable, 
 										   @Execute      = @Execute
 			SET @Error = @@ERROR
