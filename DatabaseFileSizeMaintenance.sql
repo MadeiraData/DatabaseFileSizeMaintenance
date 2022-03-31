@@ -2,10 +2,10 @@ SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
--- EXEC [DatabaseFileSizeMaintenance] 'USER_DATABASES', @MinFileSizeToShrinkMB = 50
+-- EXEC [DatabaseFileSizeMaintenance] 'USER_DATABASES', @MinFileSizeForShrinkMB = 50, @ShrinkIntervalMB = 5
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[DatabaseFileSizeMaintenance]') AND type in (N'P', N'PC'))
 BEGIN
-EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [dbo].[DatabaseFileSizeMaintenance] AS'
+EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [dbo].[DatabaseFileSizeMaintenance] AS SET NOCOUNT ON;'
 END
 GO
 /*
@@ -14,25 +14,47 @@ License
 THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 ALTER PROCEDURE [dbo].[DatabaseFileSizeMaintenance]
- @Databases								NVARCHAR(MAX) = NULL
-,@UsedSpacePercentHighThreshold	        INT = 95						-- if used space higher than this, will grow file
-,@UsedSpacePercentLowThreshold	        INT = 10						-- if used space smaller than this, will shrink file
-,@MinFileSizeToShrinkMB					INT = 50000						-- if size smaller than thi  s, will not shrink
-,@MinDatabaseAgeInDays					INT = 30						-- databases must be at least this old to be checked
-,@TargetShrinkSizePercent				INT = 33						-- when shrinking, try to shrink down to this percentage of current file size
-,@MinTargetShrinkSizeMB					INT = 64						-- prevent shrinking to a size smaller than this
-,@ShrinkAllowReorganize					CHAR(1) = 'Y'					-- set whether to allow reorganizing pages during shrink
-,@DatabaseOrder							NVARCHAR(max) = NULL
-,@DatabasesInParallel					CHAR(1) = 'N'
-,@LogToTable							CHAR(1) = 'Y'
-,@Execute								CHAR(1) = 'Y'
-,@FileTypes								CHAR(4) = 'ALL'					-- used for specifying the file types we want to manage
+
+-- parameters controlling WHAT to shrink or grow
+ @Databases				NVARCHAR(MAX)	= NULL		-- used for specifying which databases should be managed
+,@FileTypes				CHAR(4)		= 'ALL'		-- used for specifying the file types we want to manage (ALL | ROWS | LOG)
+
+-- parameters controlling WHEN to shrink or grow
+,@UsedSpacePercentHighThreshold	        INT		= 95		-- if the file used space percentage is higher than this, will grow file
+,@UsedSpacePercentLowThreshold	        INT		= 10		-- if the file used space percentage is smaller than this, will try to shrink file
+,@MinFileSizeForShrinkMB		INT		= 50000		-- if size smaller than this (in MB), will NOT shrink
+,@MinDatabaseAgeInDays			INT		= 30		-- databases must be at least this old (in days) to be checked
+
+-- parameters controlling TARGET shrink size
+,@ShrinkToTargetSizePercent		INT		= NULL		-- when shrinking, try to shrink down to this percentage of current file size
+,@ShrinkToMinPercentFree                INT		= 80		-- when shrinking, try to leave at least this much percent free in current file. Must be smaller than @UsedSpacePercentHighThreshold.
+,@ShrinkToMaxSizeMB			INT		= 64		-- prevent shrinking to a size smaller than this (in MB)
+,@ShrinkAllowReorganize			CHAR(1)		= 'Y'		-- set whether to allow reorganizing pages during shrink
+
+-- parameters controlling shrink INTERVALS
+,@ShrinkIntervalMB			INT		= NULL		-- specify the interval size (in MB) for each shrink. Leave NULL to shrink the file in a single interval
+,@DelayBetweenShrinks			VARCHAR(15)	= '00:00:00.5'  -- delay to wait between shrink iterations (in 'hh:mm[[:ss].mss]' format). Leave NULL to disable delay between iterations
+,@RegrowOnError5240			BIT		= 1		-- common error 5240 may be resolved by temporarily increasing the file size before shrinking it again.
+
+-- parameters for implementing AG recovery queue check
+,@AGReplicaLinkedServer	                SYSNAME		= NULL		-- linked Server name of an AG replica to check. Leave as NULL to ignore.
+,@MaxReplicaRecoveryQueue               INT		= 20000		-- max recovery queue of AG replica (in KB). Use this to prevent overload on the AG.
+,@RecoveryQueueSeverity                 INT		= 16		-- error severity to raise when @MaxReplicaRecoveryQueue is breached. 
+
+-- common DatabaseMaintenance parameters
+,@Updateability				NVARCHAR(max)	= 'ALL'
+,@TimeLimit				INT		= NULL
+,@LockTimeout				INT		= NULL
+,@LockMessageSeverity			INT		= 16
+,@StringDelimiter			NVARCHAR(max)	= ','
+,@DatabaseOrder				NVARCHAR(max)	= NULL
+,@DatabasesInParallel			NVARCHAR(3)	= 'N'
+,@LogToTable				NVARCHAR(3)	= 'Y'
+,@Execute				NVARCHAR(3)	= 'Y'
 AS
 BEGIN
-	-- SET NOCOUNT ON added to prevent extra result sets from
-	-- interfering with SELECT statements.
-
 SET NOCOUNT, ARITHABORT, XACT_ABORT, ANSI_NULLS ON;
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
 
   DECLARE @StartMessage nvarchar(max)
   DECLARE @EndMessage nvarchar(max)
@@ -127,33 +149,39 @@ IF ISNULL(@UsedSpacePercentHighThreshold,0) NOT BETWEEN 1 AND 100
 IF ISNULL(@UsedSpacePercentLowThreshold,0) NOT BETWEEN 1 AND @UsedSpacePercentHighThreshold
 	RAISERROR(N'Invalid value for @UsedSpacePercentLowThreshold: %d, must be between 1 and %d.', 16, 1, @UsedSpacePercentLowThreshold,@UsedSpacePercentHighThreshold);
 	
-IF ISNULL(@TargetShrinkSizePercent,1) NOT BETWEEN 1 AND 100
-	RAISERROR(N'Invalid value for @TargetShrinkSizePercent: %d, must be between 1 and 100.', 16, 1, @TargetShrinkSizePercent);
+IF ISNULL(@ShrinkToTargetSizePercent,1) NOT BETWEEN 1 AND 100
+	RAISERROR(N'Invalid value for @ShrinkToTargetSizePercent: %d, must be between 1 and 100.', 16, 1, @ShrinkToTargetSizePercent);
+
+IF ISNULL(@ShrinkToMinPercentFree,1) NOT BETWEEN 1 AND 100
+	RAISERROR(N'Invalid value for @ShrinkToMinPercentFree: %d, must be between 1 and 100.', 16, 1, @ShrinkToMinPercentFree);
+
+IF @ShrinkToMinPercentFree IS NOT NULL AND @ShrinkToTargetSizePercent IS NOT NULL AND @ShrinkToMinPercentFree > @ShrinkToTargetSizePercent
+	RAISERROR(N'Invalid value for @ShrinkToMinPercentFree: %d, must be lower than or equal to @ShrinkToTargetSizePercent: %d.', 16, 1, @ShrinkToMinPercentFree, @ShrinkToTargetSizePercent);
 
 IF ISNULL(@MinDatabaseAgeInDays,0) < 0
 	RAISERROR(N'Invalid value for @MinDatabaseAgeInDays: %d, must be 0 or higher.', 16, 1, @MinDatabaseAgeInDays);
 
-IF ISNULL(@MinTargetShrinkSizeMB,1) < 1
-	RAISERROR(N'Invalid value for @MinTargetShrinkSizeMB: %d, must be 1 or higher.', 16, 1, @MinTargetShrinkSizeMB);
+IF ISNULL(@ShrinkToMaxSizeMB,1) < 1
+	RAISERROR(N'Invalid value for @ShrinkToMaxSizeMB: %d, must be 1 or higher.', 16, 1, @ShrinkToMaxSizeMB);
 
 DECLARE @tmpDatabaseFiles AS TABLE
 (
-		dbName SYSNAME,
-		dbFileName SYSNAME,
-		[UsedSpaceIn_%] FLOAT,
-		IsFileGrow_perc BIT NOT NULL,
-		Growth INT,
-		FileSizeInMB INT
+    dbName SYSNAME,
+    dbFileName SYSNAME,
+    [UsedSpaceIn_%] FLOAT,
+    IsFileGrow_perc BIT NOT NULL,
+    Growth INT,
+    FileSizeInMB INT
 )
 
 
-DECLARE @DB_name			VARCHAR(500),
+DECLARE @DB_name		VARCHAR(500),
         @DB_FileName		SYSNAME,
-		@SpaceUsedPercent	DECIMAL(10,2),
-		@isPercentage		BIT,
-		@FileAutoGrowth		INT,
-		@FileSizeInMB		INT, 
-		@Qry				NVARCHAR(MAX)
+	@SpaceUsedPercent	DECIMAL(10,2),
+	@isPercentage		BIT,
+	@FileAutoGrowth		INT,
+	@FileSizeInMB		INT, 
+	@Qry			NVARCHAR(MAX)
 
 		
 
@@ -648,6 +676,7 @@ BEGIN
 										   @CommandType  = 'AutoGrowth', 
 										   @Mode		 = 1, 
 										   @DatabaseName = @DB_name, 
+										   @DatabaseContext = @DB_name,
 										   @LogToTable   = @LogToTable, 
 										   @Execute      = @Execute
 			SET @Error = @@ERROR
@@ -670,18 +699,18 @@ BEGIN
 			BREAK;
 	END
 
-	IF @HasGrown = 0 AND @SpaceUsedPercent <= @UsedSpacePercentLowThreshold AND @FileSizeInMB > @MinFileSizeToShrinkMB
+	IF @HasGrown = 0 AND @SpaceUsedPercent <= @UsedSpacePercentLowThreshold AND @FileSizeInMB > @MinFileSizeForShrinkMB
 	BEGIN
 		SET @PercentString = CONVERT(nvarchar, @SpaceUsedPercent);
 		SET @NewSizeForFile = (
 									SELECT MAX(Val) 
 									FROM (VALUES
-										(CEILING(@FileSizeInMB * (@TargetShrinkSizePercent/100.0)))
-										,(ISNULL(@MinTargetShrinkSizeMB,1))
+										(CEILING(@FileSizeInMB * (@ShrinkToTargetSizePercent/100.0)))
+										,(ISNULL(@ShrinkToMaxSizeMB,1))
 									) AS V(Val)
 								)
 		
-		WHILE @Error = 0 AND @NewSizeForFile < @FileSizeInMB AND @SpaceUsedPercent <= @UsedSpacePercentLowThreshold AND @FileSizeInMB > @MinFileSizeToShrinkMB
+		WHILE @Error = 0 AND @NewSizeForFile < @FileSizeInMB AND @SpaceUsedPercent <= @UsedSpacePercentLowThreshold AND @FileSizeInMB > @MinFileSizeForShrinkMB
 		BEGIN
 			DECLARE @FileSizeAfterShrink INT
 			RAISERROR(N'DB: %s, File: %s used space %s percent - shrinking from %d to %d', 0, 1, @DB_name, @DB_FileName, @PercentString, @FileSizeInMB, @NewSizeForFile) WITH NOWAIT;
@@ -693,6 +722,7 @@ BEGIN
 										   @CommandType  = 'AutoShrink', 
 										   @Mode		 = 1, 
 										   @DatabaseName = @DB_name, 
+										   @DatabaseContext = @DB_name,
 										   @LogToTable   = @LogToTable, 
 										   @Execute      = @Execute
 			SET @Error = @@ERROR
@@ -716,8 +746,8 @@ BEGIN
 			SET @NewSizeForFile = (
 										SELECT MAX(Val) 
 										FROM (VALUES
-											(CEILING(@FileSizeInMB * (@TargetShrinkSizePercent/100.0)))
-											,(ISNULL(@MinTargetShrinkSizeMB,1))
+											(CEILING(@FileSizeInMB * (@ShrinkToTargetSizePercent/100.0)))
+											,(ISNULL(@ShrinkToMaxSizeMB,1))
 										) AS V(Val)
 									)
 		
